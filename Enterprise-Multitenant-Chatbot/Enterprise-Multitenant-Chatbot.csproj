@@ -1,0 +1,22 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.1.2">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>27467392-e4e3-4143-b13d-756090b406cb</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.1.2" />
+        <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.1.2" />
+        <PackageReference Include="Keycloak.AuthServices.Aspire.Hosting" Version="0.2.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\src\ChatBot.Api\ChatBot.Api.csproj" />
+        <ProjectReference Include="..\src\ChatBot.Gateway\ChatBot.Gateway.csproj" />
+    </ItemGroup>
+
+</Project>

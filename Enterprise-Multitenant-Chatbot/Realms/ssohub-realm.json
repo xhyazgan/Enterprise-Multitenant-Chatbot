@@ -1,0 +1,183 @@
+{
+  "realm": "ssohub",
+  "enabled": true,
+  "displayName": "SSOHub",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 120,
+  "failureFactor": 5,
+  "passwordPolicy": "length(8) and digits(1)",
+  "ssoSessionIdleTimeout": 14400,
+  "ssoSessionMaxLifespan": 43200,
+  "accessTokenLifespan": 600,
+  "eventsEnabled": true,
+  "eventsListeners": ["jboss-logging"],
+  "enabledEventTypes": [
+    "LOGIN", "LOGIN_ERROR", "LOGOUT", "REGISTER",
+    "REGISTER_ERROR", "CODE_TO_TOKEN", "CODE_TO_TOKEN_ERROR",
+    "UPDATE_TOTP", "UPDATE_TOTP_ERROR", "REMOVE_TOTP"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Platform administrator" },
+      { "name": "developer", "description": "Developer with API access" },
+      { "name": "user", "description": "Standard platform user" }
+    ]
+  },
+  "defaultRoles": ["user"],
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "otpPolicyInitialCounter": 0,
+  "clients": [
+    {
+      "clientId": "chatbot-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "tenant_id",
+            "claim.value": "ssohub",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "sso-portal",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "tenant_id",
+            "claim.value": "ssohub",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@ssohub.io",
+      "firstName": "Admin",
+      "lastName": "Operator",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "secure12", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@ssohub.io",
+      "firstName": "Alice",
+      "lastName": "Dev",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "secure12", "temporary": false }],
+      "realmRoles": ["developer"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@ssohub.io",
+      "firstName": "Bob",
+      "lastName": "Engineer",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "secure12", "temporary": false }],
+      "realmRoles": ["developer"]
+    },
+    {
+      "username": "eve",
+      "enabled": true,
+      "email": "eve@ssohub.io",
+      "firstName": "Eve",
+      "lastName": "Chen",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "secure12", "temporary": false }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "frank",
+      "enabled": true,
+      "email": "frank@ssohub.io",
+      "firstName": "Frank",
+      "lastName": "Lopez",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "secure12", "temporary": false }],
+      "realmRoles": ["user"]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+
+# Node
+node_modules/
+dist/
+
+# Environment
+.env
+*.env
+
+# Configuration files with secrets
+appsettings.json
+appsettings.*.json
+!appsettings.Development.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs

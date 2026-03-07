@@ -1,0 +1,173 @@
+{
+  "realm": "basiccorp",
+  "enabled": true,
+  "displayName": "BasicCorp",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 300,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "failureFactor": 3,
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername",
+  "ssoSessionIdleTimeout": 900,
+  "ssoSessionMaxLifespan": 3600,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 300,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Full system administrator" },
+      { "name": "manager", "description": "Department manager with elevated access" },
+      { "name": "user", "description": "Standard employee" },
+      { "name": "viewer", "description": "Read-only access" }
+    ]
+  },
+  "defaultRoles": ["viewer"],
+  "clients": [
+    {
+      "clientId": "chatbot-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "300"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "tenant_id",
+            "claim.value": "basiccorp",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "sso-portal",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "300"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "tenant_id",
+            "claim.value": "basiccorp",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@basiccorp.com",
+      "firstName": "Admin",
+      "lastName": "Yonetici",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Secure!2026bc", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@basiccorp.com",
+      "firstName": "Alice",
+      "lastName": "Johnson",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Secure!2026bc", "temporary": false }],
+      "realmRoles": ["manager"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@basiccorp.com",
+      "firstName": "Bob",
+      "lastName": "Smith",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Secure!2026bc", "temporary": false }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "charlie",
+      "enabled": true,
+      "email": "charlie@basiccorp.com",
+      "firstName": "Charlie",
+      "lastName": "Brown",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Secure!2026bc", "temporary": false }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "diana",
+      "enabled": true,
+      "email": "diana@basiccorp.com",
+      "firstName": "Diana",
+      "lastName": "Martinez",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Secure!2026bc", "temporary": false }],
+      "realmRoles": ["viewer"]
+    }
+  ]
+}

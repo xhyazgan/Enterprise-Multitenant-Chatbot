@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "WebSearch",
+      "WebFetch(domain:aspire.dev)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet nuget:*)",
+      "Bash(dotnet package:*)",
+      "Bash(dotnet build:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}

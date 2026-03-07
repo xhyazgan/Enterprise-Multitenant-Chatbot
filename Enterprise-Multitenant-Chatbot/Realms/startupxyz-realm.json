@@ -1,0 +1,156 @@
+{
+  "realm": "startupxyz",
+  "enabled": true,
+  "displayName": "StartupXYZ",
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": true,
+  "bruteForceProtected": false,
+  "passwordPolicy": "length(6)",
+  "ssoSessionIdleTimeout": 86400,
+  "ssoSessionMaxLifespan": 604800,
+  "accessTokenLifespan": 1800,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Startup founder / admin" },
+      { "name": "member", "description": "Team member" }
+    ]
+  },
+  "defaultRoles": ["member"],
+  "clients": [
+    {
+      "clientId": "chatbot-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "1800"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "tenant_id",
+            "claim.value": "startupxyz",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "sso-portal",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "1800"
+      },
+      "protocolMappers": [
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "tenant_id",
+            "claim.value": "startupxyz",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@startupxyz.com",
+      "firstName": "Admin",
+      "lastName": "Founder",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "test12", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@startupxyz.com",
+      "firstName": "Alice",
+      "lastName": "Johnson",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "test12", "temporary": false }],
+      "realmRoles": ["member"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@startupxyz.com",
+      "firstName": "Bob",
+      "lastName": "Smith",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "test12", "temporary": false }],
+      "realmRoles": ["member"]
+    },
+    {
+      "username": "grace",
+      "enabled": true,
+      "email": "grace@startupxyz.com",
+      "firstName": "Grace",
+      "lastName": "Kim",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "test12", "temporary": false }],
+      "realmRoles": ["admin"]
+    }
+  ]
+}
