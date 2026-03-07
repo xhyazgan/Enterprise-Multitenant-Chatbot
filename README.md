@@ -190,9 +190,15 @@ Each tenant can have different AI provider (OpenAI/Claude), model, and system pr
 
 ### Prerequisites
 
-- Docker Desktop
-- .NET 10.0 SDK (for local development)
-- Node.js 20+ (for frontend development)
+- **.NET 10.0 SDK** (with Aspire workload)
+- **Docker Desktop** (required for Aspire)
+- **Node.js 20+** (for frontend development)
+
+### Install .NET Aspire Workload
+
+```bash
+dotnet workload install aspire
+```
 
 ### Environment Setup
 
@@ -202,33 +208,43 @@ git clone <repository-url>
 cd Enterprise-Multitenant-Chatbot
 ```
 
-2. **Create `.env` file** (copy from `.env.example`):
+2. **Set API Keys** (recommended: user secrets):
 ```bash
-POSTGRES_PASSWORD=postgres
-KEYCLOAK_ADMIN_PASSWORD=admin
-OPENAI_API_KEY=sk-your-key-here
-CLAUDE_API_KEY=your-key-here
+cd Enterprise-Multitenant-Chatbot
+dotnet user-secrets set "OpenAI:ApiKey" "your-openai-key"
+dotnet user-secrets set "Claude:ApiKey" "your-claude-key"
 ```
 
-3. **Start all services**:
+3. **Run with .NET Aspire** (recommended):
 ```bash
+cd Enterprise-Multitenant-Chatbot
+dotnet run
+```
+
+Aspire Dashboard will open automatically. It provides unified view of all services, logs, and distributed tracing.
+
+4. **Alternative: Docker Compose**:
+```bash
+# Create .env file first (copy from .env.example)
 docker-compose up -d
-```
-
-4. **Wait for services to be healthy** (30-60 seconds):
-```bash
-docker-compose ps
+docker-compose ps  # Check service health
 ```
 
 ### Access the Application
 
+**With .NET Aspire (recommended):**
+- **Aspire Dashboard**: http://localhost:15000 or URL shown in terminal
+  - View all services, logs, metrics, and distributed traces
+  - Click on service endpoints to access them
+- **Keycloak Admin**: Check dashboard for port (default credentials: admin / admin)
+
+**With Docker Compose:**
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | **SSO Portal** | http://localhost:3001 | Select tenant → Login |
 | **Chatbot App** | http://localhost:3000 | After login from portal |
 | **API Gateway** | http://localhost:5100 | N/A (JWT required) |
 | **Keycloak Admin** | http://localhost:8080 | admin / admin |
-| **API Direct** | http://localhost:5200 | N/A (headers required) |
 
 ### Test Users (Pre-configured in Realms)
 
@@ -245,28 +261,33 @@ docker-compose ps
 
 ## 🛠️ Development
 
-### Run Backend Locally
+### Run with Aspire (Recommended)
 
+```bash
+cd Enterprise-Multitenant-Chatbot
+dotnet run
+```
+
+Aspire automatically orchestrates all services with hot reload, logging, and distributed tracing.
+
+### Run Individual Services
+
+**Backend API:**
 ```bash
 cd src/ChatBot.Api
-dotnet restore
 dotnet run
 ```
 
-### Run Frontend Locally
-
-```bash
-cd src/ChatBot.Frontend
-npm install
-npm run dev
-```
-
-### Run Gateway Locally
-
+**Gateway:**
 ```bash
 cd src/ChatBot.Gateway
-dotnet restore
 dotnet run
+```
+
+**Frontend:**
+```bash
+cd src/ChatBot.Frontend
+npm install && npm run dev
 ```
 
 ### Database Migrations
@@ -283,6 +304,7 @@ dotnet ef database update
 
 ### Backend
 - **.NET 10.0** + ASP.NET Core
+- **.NET Aspire** (Orchestration & Observability)
 - **Entity Framework Core** (PostgreSQL)
 - **YARP** (API Gateway)
 
@@ -292,6 +314,7 @@ dotnet ef database update
 - **Keycloak JS** + Zustand
 
 ### Infrastructure
+- **.NET Aspire** (Local Development)
 - **Docker** + Docker Compose
 - **PostgreSQL 16**
 - **Keycloak 26.0**
