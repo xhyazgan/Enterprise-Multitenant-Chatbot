@@ -21,4 +21,8 @@ public class TenantResolver(IServiceScopeFactory scopeFactory)
         _cache.TryAdd(tenantId, config);
         return config;
     }
+
+    public void InvalidateCache(string tenantId) => _cache.TryRemove(tenantId, out _);
+
+    public void InvalidateAll() => _cache.Clear();
 }

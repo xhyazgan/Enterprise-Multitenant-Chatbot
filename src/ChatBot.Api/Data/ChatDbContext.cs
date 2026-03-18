@@ -41,6 +41,8 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(
 
     private static void SeedData(ModelBuilder modelBuilder)
     {
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
         modelBuilder.Entity<TenantConfig>().HasData(
             new TenantConfig
             {
@@ -49,7 +51,11 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(
                 DisplayName = "BasicCorp",
                 AiProvider = "Claude",
                 AiModel = "claude-haiku-4-5",
-                SystemPrompt = "You are a professional assistant for BasicCorp employees. Be formal, precise, and business-oriented."
+                SystemPrompt = "You are a professional assistant for BasicCorp employees. Be formal, precise, and business-oriented.",
+                Color = "#3B82F6",
+                Description = "Enterprise — Strict security, short sessions, 4-tier roles",
+                IsActive = true,
+                CreatedAt = now
             },
             new TenantConfig
             {
@@ -58,7 +64,11 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(
                 DisplayName = "SSOHub",
                 AiProvider = "Claude",
                 AiModel = "claude-haiku-4-5",
-                SystemPrompt = "You are a technical assistant for SSOHub developers. Be concise, use code examples when relevant, and focus on technical accuracy."
+                SystemPrompt = "You are a technical assistant for SSOHub developers. Be concise, use code examples when relevant, and focus on technical accuracy.",
+                Color = "#10B981",
+                Description = "Tech Company — OTP for admins, long sessions, audit logging",
+                IsActive = true,
+                CreatedAt = now
             },
             new TenantConfig
             {
@@ -67,7 +77,11 @@ public class ChatDbContext(DbContextOptions<ChatDbContext> options) : DbContext(
                 DisplayName = "StartupXYZ",
                 AiProvider = "Claude",
                 AiModel = "claude-haiku-4-5",
-                SystemPrompt = "You are a friendly assistant for StartupXYZ team. Be casual, creative, and encouraging. Use simple language."
+                SystemPrompt = "You are a friendly assistant for StartupXYZ team. Be casual, creative, and encouraging. Use simple language.",
+                Color = "#F59E0B",
+                Description = "Startup — Self-registration, relaxed policy, flat roles",
+                IsActive = true,
+                CreatedAt = now
             }
         );
     }

@@ -28,3 +28,13 @@ export interface TenantInfo {
   description: string;
   aiModel: string;
 }
+
+export interface CreateTenantRequest {
+  tenantId: string;
+  displayName: string;
+  aiProvider: string;
+  aiModel: string;
+  systemPrompt?: string;
+  color: string;
+  description: string;
+}

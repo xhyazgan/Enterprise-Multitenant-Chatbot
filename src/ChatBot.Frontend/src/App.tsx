@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAuthStore } from './stores/authStore';
-import { getTenantFromSubdomain } from './config/keycloak';
+import { getSubdomainId } from './config/keycloak';
 import TenantSelector from './components/TenantSelector';
 import ChatLayout from './components/ChatLayout';
 
@@ -21,7 +21,7 @@ function App() {
     );
   }
 
-  const isOnSubdomain = getTenantFromSubdomain() !== null;
+  const isOnSubdomain = getSubdomainId() !== null;
 
   if (!authenticated && !isOnSubdomain) {
     return <TenantSelector />;

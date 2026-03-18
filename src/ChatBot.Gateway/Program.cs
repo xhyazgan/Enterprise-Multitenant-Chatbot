@@ -4,7 +4,7 @@ using ChatBot.Gateway.Middleware;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.Services.AddMultiRealmJwt(builder.Configuration);
+builder.Services.AddDynamicJwt(builder.Configuration);
 builder.Services.AddAuthorization();
 
 // Resolve chatbot-api URL from Aspire service discovery env vars

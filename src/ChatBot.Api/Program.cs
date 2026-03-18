@@ -15,6 +15,7 @@ builder.Services.AddSingleton<OpenAiService>();
 builder.Services.AddSingleton<ClaudeAiService>();
 builder.Services.AddSingleton<AiServiceFactory>();
 builder.Services.AddScoped<ChatSessionService>();
+builder.Services.AddSingleton<KeycloakAdminService>();
 
 var app = builder.Build();
 
@@ -59,5 +60,6 @@ app.MapGet("/api/debug/tenants", async (ChatDbContext db) =>
 
 app.MapDefaultEndpoints();
 app.MapChatEndpoints();
+app.MapTenantEndpoints();
 
 app.Run();

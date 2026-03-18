@@ -12,7 +12,9 @@ public class TenantContextMiddleware(RequestDelegate next)
         {
             if (context.Request.Path.StartsWithSegments("/health") ||
                 context.Request.Path.StartsWithSegments("/alive") ||
-                context.Request.Path.StartsWithSegments("/api/debug"))
+                context.Request.Path.StartsWithSegments("/api/debug") ||
+                context.Request.Path.StartsWithSegments("/api/tenants") ||
+                context.Request.Path.StartsWithSegments("/api/admin"))
             {
                 await next(context);
                 return;

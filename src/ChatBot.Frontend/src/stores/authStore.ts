@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import Keycloak from 'keycloak-js';
-import { createKeycloakInstance, getTenantFromSubdomain, getTenantUrl, getBaseUrl } from '../config/keycloak';
+import { createKeycloakInstance, getSubdomainId, getTenantUrl, getBaseUrl } from '../config/keycloak';
 import type { TenantInfo } from '../types';
 
 interface UserProfile {
@@ -90,9 +90,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (_initPromise) return _initPromise;
 
     _initPromise = (async () => {
-      const tenant = getTenantFromSubdomain();
+      const subdomain = getSubdomainId();
 
-      if (!tenant) {
+      if (!subdomain) {
         set({ initialized: true });
         return;
       }
@@ -101,6 +101,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.warn('[auth] Keycloak returned error, clearing');
         window.history.replaceState(null, '', window.location.pathname);
         set({ initialized: true });
+        return;
+      }
+
+      // Fetch tenant info from API
+      const { useTenantStore } = await import('./tenantStore');
+      const tenantStore = useTenantStore.getState();
+      await tenantStore.fetchTenants();
+      const tenant = tenantStore.getTenantById(subdomain);
+
+      if (!tenant) {
+        console.warn('[auth] Unknown tenant subdomain:', subdomain);
+        window.location.href = getBaseUrl();
         return;
       }
 

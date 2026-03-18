@@ -4,79 +4,49 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace ChatBot.Gateway.Auth;
 
-public static class MultiRealmJwtConfiguration
+public static class DynamicJwtConfiguration
 {
-    private static readonly string[] Realms = ["basiccorp", "ssohub", "startupxyz"];
-
-    public static AuthenticationBuilder AddMultiRealmJwt(this IServiceCollection services, IConfiguration configuration)
+    public static AuthenticationBuilder AddDynamicJwt(this IServiceCollection services, IConfiguration configuration)
     {
-        var keycloakUrl = configuration.GetConnectionString("keycloak")
+        var keycloakUrl = (configuration.GetConnectionString("keycloak")
                           ?? configuration["Keycloak:Url"]
-                          ?? "http://localhost:8080";
-        var schemes = Realms.Select(r => $"Bearer_{r}").ToArray();
+                          ?? "http://localhost:8080").TrimEnd('/');
 
-        var builder = services.AddAuthentication(options =>
-        {
-            options.DefaultScheme = "MultiRealm";
-            options.DefaultChallengeScheme = "MultiRealm";
-        })
-        .AddPolicyScheme("MultiRealm", "Multi-Realm JWT", options =>
-        {
-            options.ForwardDefaultSelector = context =>
+        // Register JWKS HttpClient
+        services.AddHttpClient("jwks")
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
-                var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
-                    return schemes[0]; // Default fallback
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
 
-                var token = authHeader["Bearer ".Length..];
+        // Register the key resolver
+        services.AddSingleton(sp => new DynamicJwksKeyResolver(
+            keycloakUrl,
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILoggerFactory>()));
 
-                // Decode JWT payload to find issuer without validation
-                try
-                {
-                    var parts = token.Split('.');
-                    if (parts.Length >= 2)
-                    {
-                        var payload = parts[1].Replace('-', '+').Replace('_', '/');
-                        payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-                        var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
-                        var doc = System.Text.Json.JsonDocument.Parse(json);
-                        if (doc.RootElement.TryGetProperty("iss", out var issuer))
-                        {
-                            var iss = issuer.GetString() ?? "";
-                            foreach (var realm in Realms)
-                            {
-                                if (iss.Contains($"/realms/{realm}"))
-                                    return $"Bearer_{realm}";
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // Fall through to default
-                }
+        // Add authentication with a basic setup
+        var builder = services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer();
 
-                return schemes[0];
-            };
-        });
-
-        foreach (var realm in Realms)
-        {
-            builder.AddJwtBearer($"Bearer_{realm}", options =>
+        // Post-configure to inject the resolver (has access to DI)
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<DynamicJwksKeyResolver>((options, resolver) =>
             {
-                options.Authority = $"{keycloakUrl}/realms/{realm}";
                 options.RequireHttpsMetadata = false;
-                options.BackchannelHttpHandler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                };
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = $"{keycloakUrl}/realms/{realm}",
+                    IssuerValidator = (issuer, securityToken, validationParameters) =>
+                    {
+                        if (issuer.StartsWith($"{keycloakUrl}/realms/"))
+                            return issuer;
+                        throw new SecurityTokenInvalidIssuerException($"Invalid issuer: {issuer}");
+                    },
                     ValidateAudience = false,
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromSeconds(30)
+                    ClockSkew = TimeSpan.FromSeconds(30),
+                    IssuerSigningKeyResolver = resolver.ResolveSigningKeys
                 };
                 options.Events = new JwtBearerEvents
                 {
@@ -84,12 +54,11 @@ public static class MultiRealmJwtConfiguration
                     {
                         var log = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
                             .CreateLogger("JwtAuth");
-                        log.LogError(context.Exception, "JWT auth failed for realm {Realm}", realm);
+                        log.LogError(context.Exception, "JWT auth failed");
                         return Task.CompletedTask;
                     }
                 };
             });
-        }
 
         return builder;
     }

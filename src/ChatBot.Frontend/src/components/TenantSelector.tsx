@@ -1,6 +1,16 @@
-import { tenants, getTenantUrl } from '../config/keycloak';
+import { useEffect, useState } from 'react';
+import { getTenantUrl } from '../config/keycloak';
+import { useTenantStore } from '../stores/tenantStore';
+import AdminPanel from './AdminPanel';
 
 export default function TenantSelector() {
+  const { tenants, loading, fetchTenants } = useTenantStore();
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  useEffect(() => {
+    fetchTenants();
+  }, [fetchTenants]);
+
   const handleSelect = (tenantId: string) => {
     window.location.href = getTenantUrl(tenantId);
   };
@@ -14,31 +24,54 @@ export default function TenantSelector() {
         <p className="text-gray-400 text-center mb-8">
           Select your organization to continue
         </p>
-        <div className="space-y-3">
-          {tenants.map((tenant) => (
-            <button
-              key={tenant.id}
-              onClick={() => handleSelect(tenant.id)}
-              className="w-full px-6 py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-lg
-                         border-l-4 hover:scale-[1.02] transition-all text-left"
-              style={{ borderLeftColor: tenant.color }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: tenant.color }}
-                />
-                <div>
-                  <div className="text-lg font-semibold">{tenant.name}</div>
-                  <div className="text-sm text-gray-400 mt-0.5">{tenant.description}</div>
+
+        {loading ? (
+          <div className="text-center text-gray-400 py-8">
+            Loading organizations...
+          </div>
+        ) : tenants.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            No organizations available. Create one using the admin panel below.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {tenants.map((tenant) => (
+              <button
+                key={tenant.id}
+                onClick={() => handleSelect(tenant.id)}
+                className="w-full px-6 py-4 bg-gray-800 hover:bg-gray-700 text-white rounded-lg
+                           border-l-4 hover:scale-[1.02] transition-all text-left"
+                style={{ borderLeftColor: tenant.color }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: tenant.color }}
+                  />
+                  <div>
+                    <div className="text-lg font-semibold">{tenant.name}</div>
+                    <div className="text-sm text-gray-400 mt-0.5">{tenant.description}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-2 ml-6 text-xs text-gray-500 font-mono">
-                {tenant.id}.localhost
-              </div>
-            </button>
-          ))}
+                <div className="mt-2 ml-6 text-xs text-gray-500 font-mono">
+                  {tenant.id}.localhost
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => setShowAdmin(!showAdmin)}
+            className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+          >
+            {showAdmin ? 'Hide Admin Panel' : 'Admin Panel'}
+          </button>
         </div>
+
+        {showAdmin && <AdminPanel />}
+
         <p className="text-gray-600 text-center text-xs mt-6">
           Each organization runs on its own subdomain with isolated sessions
         </p>

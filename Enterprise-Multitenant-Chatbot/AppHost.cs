@@ -15,7 +15,9 @@ var keycloak = builder.AddKeycloakContainer("keycloak")
 // ChatBot API
 var api = builder.AddProject<Projects.ChatBot_Api>("chatbot-api")
     .WithReference(chatbotDb)
-    .WaitFor(chatbotDb);
+    .WithReference(keycloak)
+    .WaitFor(chatbotDb)
+    .WaitFor(keycloak);
 
 // ChatBot Gateway
 var gateway = builder.AddProject<Projects.ChatBot_Gateway>("chatbot-gateway")
