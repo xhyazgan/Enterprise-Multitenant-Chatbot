@@ -1,190 +1,281 @@
-# Enterprise Multi-Tenant Chatbot
+<div align="center">
 
-Enterprise-grade multi-tenant chatbot platform with **zero-code tenant provisioning**, **dynamic Keycloak realm management**, and **intelligent AI routing**. Built with .NET Aspire, YARP Gateway, and Keycloak.
+# Enterprise Multi-Tenant AI Chatbot
+
+**One click. New tenant. Zero code.**
+
+Create fully isolated AI chatbot tenants with their own authentication, users, and AI configuration — all without writing a single line of code.
+
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Keycloak](https://img.shields.io/badge/Keycloak-26-4D4D4D?style=for-the-badge&logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 ---
 
-## Project Goals
+**[Quick Start](#-quick-start)** | **[How It Works](#-how-it-works)** | **[Architecture](#-architecture)** | **[API Reference](#-api-reference)**
 
-- **Zero-Code Multi-Tenancy**: Add new tenants from the Admin Panel — Keycloak realm, client, and roles are created automatically
-- **Complete Tenant Isolation**: Each tenant's data, sessions, and configurations are fully isolated
-- **Dynamic Authentication**: Gateway validates JWT tokens from any Keycloak realm without restart or configuration changes
-- **Flexible AI Integration**: Support for multiple AI providers (OpenAI, Claude) with per-tenant configuration
-- **Enterprise Security**: JWT-based authentication with dynamic realm validation via YARP Gateway
+</div>
+
+---
+
+## The Problem
+
+Building multi-tenant SaaS is hard. For every new customer you need to:
+- Set up authentication and user management
+- Configure identity providers (Google, GitHub, LDAP...)
+- Isolate their data from other tenants
+- Route AI requests to the right model with the right prompt
+- Do it all **without deploying new code**
+
+## The Solution
+
+This platform turns all of that into a **single API call**. Behind the scenes:
+
+```
+POST /api/admin/tenants { "tenantId": "acmecorp", "displayName": "Acme Corp" }
+```
+
+> **What happens in ~2 seconds:**
+>
+> 1. Keycloak realm created with OAuth 2.0 / OIDC client (PKCE)
+> 2. JWT claim mappers configured (`tenant_id`, `roles`)
+> 3. Admin user provisioned with temporary password
+> 4. Tenant config stored in PostgreSQL
+> 5. Gateway immediately accepts tokens from the new realm
+> 6. Frontend shows the new tenant in the selector
+>
+> **Done.** Navigate to `acmecorp.localhost:5173` and login.
+
+Want Google login for that tenant? Go to Keycloak Admin Console, add Google as an identity provider. **Zero code.**
+
+---
+
+## Demo
+
+```
+http://localhost:5173                    # Tenant selector (dynamic from API)
+http://basiccorp.localhost:5173          # BasicCorp tenant login
+http://acmecorp.localhost:5173           # Your new tenant login
+http://localhost:8080/admin              # Keycloak Admin Console
+```
+
+### Pre-configured Tenants
+
+| Tenant | Security Profile | AI Model | Color |
+|--------|-----------------|----------|-------|
+| **BasicCorp** | Enterprise (strict passwords, short sessions, 4-tier RBAC) | Claude Haiku 4.5 | Blue |
+| **SSOHub** | Tech Company (TOTP for admins, audit logging, 12hr sessions) | Claude Haiku 4.5 | Green |
+| **StartupXYZ** | Startup (self-registration, relaxed policy, 7-day sessions) | Claude Haiku 4.5 | Amber |
+
+Each demonstrates a different security posture — all managed through Keycloak, not code.
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) + Aspire workload
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Node.js 20+](https://nodejs.org/)
+
+```bash
+# Install Aspire workload
+dotnet workload install aspire
+
+# Clone and enter
+git clone <repository-url>
+cd Enterprise-Multitenant-Chatbot
+
+# Set your AI keys (pick one or both)
+cd Enterprise-Multitenant-Chatbot
+dotnet user-secrets set "Claude:ApiKey" "sk-ant-..."
+dotnet user-secrets set "OpenAI:ApiKey" "sk-..."
+
+# Launch everything
+dotnet run
+```
+
+Aspire Dashboard opens automatically — all services, logs, metrics, and distributed traces in one place.
+
+### Create Your First Tenant
+
+1. Open http://localhost:5173
+2. Click **Admin Panel** at the bottom
+3. Enter a Tenant ID (e.g. `mycompany`) and Display Name
+4. Hit **Create Tenant**
+5. Click on the new tenant card to login at `mycompany.localhost:5173`
+
+---
+
+## How It Works
+
+### The Magic: Dynamic Everything
+
+Most multi-tenant systems require configuration changes and restarts when adding tenants. This one doesn't.
+
+| Layer | Traditional Approach | This Project |
+|-------|---------------------|--------------|
+| **Auth** | Hardcoded realm list, restart needed | `DynamicJwksKeyResolver` — accepts any realm, fetches keys on demand |
+| **Gateway** | One JWT handler per tenant | Single handler with `IssuerSigningKeyResolver` delegate |
+| **Frontend** | Hardcoded tenant config | `GET /api/tenants` — fetched from DB at runtime |
+| **Realm Setup** | Manual Keycloak admin work | `KeycloakAdminService` — automated via Admin REST API |
+
+### Request Lifecycle
+
+```
+User clicks "BasicCorp"
+  │
+  ├─ Redirect → basiccorp.localhost:5173
+  ├─ Keycloak init (PKCE + login-required)
+  ├─ User authenticates → JWT issued by basiccorp realm
+  │
+  ├─ POST /api/chat/message (Bearer token)
+  │    │
+  │    ├─ YARP Gateway
+  │    │   ├─ Extract issuer from JWT (no validation yet)
+  │    │   ├─ Fetch JWKS from {issuer}/protocol/openid-connect/certs (cached 30min)
+  │    │   ├─ Validate signature, lifetime, issuer pattern
+  │    │   └─ Inject headers: X-Tenant-Id, X-User-Id, X-User-Email
+  │    │
+  │    ├─ ChatBot API
+  │    │   ├─ TenantContextMiddleware reads headers
+  │    │   ├─ TenantResolver loads config (cached in ConcurrentDictionary)
+  │    │   ├─ AiServiceFactory → ClaudeAiService (tenant uses Claude)
+  │    │   ├─ AI responds with tenant's system prompt context
+  │    │   └─ Message persisted with tenant_id isolation
+  │    │
+  │    └─ Response returned to frontend
+  │
+  └─ Message appears in chat UI
+```
 
 ---
 
 ## Architecture
 
 ```
-                    ┌──────────────────────┐
-                    │   Admin Panel (UI)   │  Create Tenant
-                    └──────────┬───────────┘
-                               │ POST /api/admin/tenants
-                               ▼
-┌─────────────────┐   ┌─────────────────┐   ┌──────────────────┐
-│    Frontend     │──▶│  YARP Gateway   │──▶│   ChatBot API    │
-│  React 19 +     │   │  Dynamic JWT    │   │  ┌────────────┐  │
-│  Keycloak-js    │   │  Validation     │   │  │  Keycloak  │  │
-│  Zustand        │   │                 │   │  │  Admin API │  │──▶ Creates Realm
-└─────────────────┘   └────────┬────────┘   │  └────────────┘  │   + Client
-                               │            │  ┌────────────┐  │   + Mappers
-                        ┌──────┴──────┐     │  │ AI Router  │  │   + Admin User
-                        │  Keycloak   │     │  │ Claude/GPT │  │
-                        │  Realm 1..N │     │  └────────────┘  │
-                        │  (Dynamic)  │     └────────┬─────────┘
-                        └─────────────┘              │
-                                              ┌──────▼──────┐
-                                              │ PostgreSQL  │
-                                              │ chatbot_db  │
-                                              │ keycloak_db │
-                                              └─────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                        .NET Aspire AppHost                          │
+│                   (Service Discovery + Orchestration)                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌───────────┐    ┌──────────────┐    ┌──────────────────────────┐ │
+│  │ Frontend  │───▶│ YARP Gateway │───▶│      ChatBot API         │ │
+│  │           │    │              │    │                          │ │
+│  │ React 19  │    │ Dynamic JWT  │    │ Tenant CRUD + Keycloak   │ │
+│  │ Vite 7    │    │ JWKS Cache   │    │ AI Routing (Claude/GPT)  │ │
+│  │ Tailwind 4│    │ Header Inject│    │ Chat Sessions            │ │
+│  │ Zustand   │    │              │    │                          │ │
+│  └───────────┘    └──────┬───────┘    └────────┬─────────────────┘ │
+│                          │                     │                    │
+│                   ┌──────┴───────┐      ┌──────┴───────┐           │
+│                   │   Keycloak   │      │  PostgreSQL   │           │
+│                   │   26.0       │      │  16-alpine    │           │
+│                   │              │      │               │           │
+│                   │ Realm 1..N   │      │ chatbot_db    │           │
+│                   │ (Dynamic)    │      │ keycloak_db   │           │
+│                   └──────────────┘      └───────────────┘           │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Request Flow
+### 5-Layer Tenant Isolation
 
-1. **Tenant Selection**: User visits `localhost:5173` → Frontend fetches tenant list from `GET /api/tenants`
-2. **Subdomain Redirect**: User selects tenant → Redirected to `{tenantId}.localhost:5173`
-3. **Keycloak Login**: Frontend creates Keycloak instance for that realm → `login-required` with PKCE
-4. **JWT Validation**: Gateway's `DynamicJwksKeyResolver` fetches signing keys from the realm's JWKS endpoint, caches for 30 min
-5. **Header Injection**: Gateway extracts `tenant_id`, `sub`, `email` from JWT → Injects as `X-Tenant-Id`, `X-User-Id`, `X-User-Email`
-6. **Tenant Context**: API middleware reads headers → All DB queries filtered by `tenant_id`
-7. **AI Routing**: `TenantResolver` loads tenant config → `AiServiceFactory` routes to Claude or OpenAI
-
-### Adding a New Tenant (Zero Code)
-
-```
-Admin Panel → POST /api/admin/tenants
-  → KeycloakAdminService.CreateRealmAsync()
-    → Creates realm with chatbot-frontend client
-    → Adds tenant_id claim mapper (hardcoded to realm name)
-    → Adds realm-roles mapper
-    → Creates admin user (Admin1234, temporary)
-  → Insert TenantConfig to DB
-  → Invalidate TenantResolver cache
-  → Frontend refreshes tenant list
-  → New tenant ready for login
-```
-
-After creation, configure identity providers (Google, GitHub, SAML, LDAP) directly in the Keycloak Admin Console — **no code changes needed**.
+| # | Layer | How |
+|---|-------|-----|
+| 1 | **Authentication** | Each tenant = separate Keycloak realm (independent users, passwords, MFA, identity providers) |
+| 2 | **Gateway** | Dynamic JWT validation — tokens validated against issuing realm's JWKS. Cross-realm tokens rejected. |
+| 3 | **Application** | `TenantContextMiddleware` enforces tenant context. Services scoped to `X-Tenant-Id`. |
+| 4 | **Database** | Every row tagged with `tenant_id`. All queries filtered. Cross-tenant reads impossible. |
+| 5 | **AI** | Per-tenant AI provider, model, and system prompt. BasicCorp gets formal Claude, StartupXYZ gets casual. |
 
 ---
 
-## Components
+## Tech Stack
 
-| Component | Technology | Description |
-|-----------|-----------|-------------|
-| **AppHost** | .NET Aspire 13.1.2 | Orchestrates all services with service discovery |
-| **ChatBot.Api** | .NET 10 + EF Core | Tenant CRUD, Keycloak Admin API, AI routing, chat endpoints |
-| **ChatBot.Gateway** | .NET 10 + YARP 2.3.0 | Dynamic multi-realm JWT validation, header injection, reverse proxy |
-| **ChatBot.Frontend** | React 19 + Vite 7 + Tailwind 4 | Dynamic tenant selector, admin panel, chat UI, Keycloak-js auth |
-| **Keycloak** | Keycloak 26 | Multi-realm IAM, OAuth 2.0 / OIDC, identity federation |
-| **PostgreSQL** | PostgreSQL 16 | `chatbot_db` (multi-tenant data) + `keycloak_db` |
+<table>
+<tr><td>
+
+### Backend
+| | |
+|-|-|
+| .NET 10 | ASP.NET Core Minimal APIs |
+| Aspire 13.1.2 | Orchestration + OpenTelemetry |
+| EF Core | PostgreSQL via Npgsql |
+| YARP 2.3.0 | Reverse proxy + JWT auth |
+
+</td><td>
+
+### Frontend
+| | |
+|-|-|
+| React 19.2 | TypeScript 5.9 |
+| Vite 7.3 | Tailwind CSS 4.2 |
+| Zustand 5.0 | State management |
+| keycloak-js 26.2 | OIDC/OAuth client |
+
+</td><td>
+
+### Infrastructure
+| | |
+|-|-|
+| Keycloak 26 | Multi-realm IAM |
+| PostgreSQL 16 | Primary database |
+| Docker | Container runtime |
+| Anthropic SDK 4.0 | Claude AI |
+| OpenAI SDK 2.2 | GPT models |
+
+</td></tr>
+</table>
 
 ---
 
-## Getting Started
+## API Reference
 
-### Prerequisites
+### Public
 
-- **.NET 10.0 SDK** with Aspire workload (`dotnet workload install aspire`)
-- **Docker Desktop** (required for Aspire containers)
-- **Node.js 20+** (for frontend)
+```http
+GET /api/tenants              # List active tenants (no auth required)
+```
 
-### Quick Start
+### Admin
+
+```http
+POST   /api/admin/tenants              # Create tenant + Keycloak realm
+GET    /api/admin/tenants              # List all tenants
+PUT    /api/admin/tenants/{tenantId}   # Update tenant config
+DELETE /api/admin/tenants/{tenantId}   # Deactivate tenant
+```
+
+> All admin endpoints require `X-Admin-Key` header.
+
+### Chat (JWT required)
+
+```http
+POST   /api/chat/message                      # Send message, get AI response
+GET    /api/chat/sessions                     # List user's sessions
+GET    /api/chat/sessions/{id}/messages       # Get session history
+DELETE /api/chat/sessions/{id}                # Soft delete session
+```
+
+### Example: Create Tenant
 
 ```bash
-# Clone
-git clone <repository-url>
-cd Enterprise-Multitenant-Chatbot
-
-# Set AI API keys
-cd Enterprise-Multitenant-Chatbot
-dotnet user-secrets set "OpenAI:ApiKey" "your-openai-key"
-dotnet user-secrets set "Claude:ApiKey" "your-claude-key"
-
-# Run with Aspire
-dotnet run
+curl -X POST http://localhost:5173/api/admin/tenants \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Key: dev-admin-key-change-in-production" \
+  -d '{
+    "tenantId": "acmecorp",
+    "displayName": "Acme Corporation",
+    "aiProvider": "Claude",
+    "aiModel": "claude-haiku-4-5",
+    "color": "#8B5CF6",
+    "description": "Purple-themed Acme workspace"
+  }'
 ```
-
-Aspire Dashboard opens automatically with service logs, metrics, and distributed tracing.
-
-### Access Points
-
-| Service | URL | Notes |
-|---------|-----|-------|
-| **Aspire Dashboard** | Shown in terminal | Logs, metrics, traces |
-| **Frontend** | http://localhost:5173 | Tenant selector + chat |
-| **Keycloak Admin** | Check Aspire dashboard for port | admin / admin |
-
-### Pre-configured Tenants
-
-Three tenants are seeded on first run:
-
-| Tenant | Realm | Color | Description |
-|--------|-------|-------|-------------|
-| BasicCorp | `basiccorp` | Blue | Enterprise — Strict security, 4-tier roles |
-| SSOHub | `ssohub` | Green | Tech Company — OTP, audit logging |
-| StartupXYZ | `startupxyz` | Amber | Startup — Self-registration, relaxed policy |
-
-Each realm has pre-configured test users (alice, bob, etc.) with password `password`.
-
-### Create a New Tenant
-
-1. Go to http://localhost:5173
-2. Click **Admin Panel** at the bottom
-3. Fill in Tenant ID (e.g., `acmecorp`), Display Name, and optionally customize AI provider/model
-4. Click **Create Tenant**
-5. The new tenant appears in the selector immediately
-6. Navigate to `http://acmecorp.localhost:5173` to login
-7. Optionally: configure social login providers in Keycloak Admin Console
-
----
-
-## API Endpoints
-
-### Public (No Auth)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/tenants` | List active tenants |
-
-### Admin (X-Admin-Key Header)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/admin/tenants` | Create tenant + Keycloak realm |
-| `GET` | `/api/admin/tenants` | List all tenants (including inactive) |
-| `PUT` | `/api/admin/tenants/{id}` | Update tenant config |
-| `DELETE` | `/api/admin/tenants/{id}` | Deactivate tenant |
-
-### Chat (JWT Auth via Gateway)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/chat/message` | Send message and get AI response |
-| `GET` | `/api/chat/sessions` | List user's chat sessions |
-| `GET` | `/api/chat/sessions/{id}/messages` | Get session messages |
-| `DELETE` | `/api/chat/sessions/{id}` | Delete session (soft) |
-
----
-
-## Tenant Isolation Strategy
-
-### 1. Authentication (Keycloak Realms)
-Each tenant = separate Keycloak realm with independent users, roles, and identity providers.
-
-### 2. Gateway (Dynamic JWT)
-`DynamicJwksKeyResolver` validates tokens from **any** realm under the Keycloak instance. No hardcoded realm list — new realms are accepted automatically.
-
-### 3. Application (Tenant Context Middleware)
-API middleware extracts `X-Tenant-Id` and `X-User-Id` headers. All service layer operations scoped to the current tenant.
-
-### 4. Database (Tenant ID Column)
-Every table includes `tenant_id`. All queries filtered automatically. Cross-tenant data access is impossible at the application level.
-
-### 5. AI Configuration
-Each tenant has its own AI provider (Claude/OpenAI), model, and system prompt.
 
 ---
 
@@ -192,99 +283,83 @@ Each tenant has its own AI provider (Claude/OpenAI), model, and system prompt.
 
 ```
 Enterprise-Multitenant-Chatbot/
-├── Enterprise-Multitenant-Chatbot/     # Aspire AppHost (orchestrator)
-│   ├── AppHost.cs                      # Service composition
-│   └── Realms/                         # Seed realm JSON files
-│       ├── basiccorp-realm.json
-│       ├── ssohub-realm.json
-│       └── startupxyz-realm.json
+│
+├── Enterprise-Multitenant-Chatbot/        # .NET Aspire AppHost
+│   ├── AppHost.cs                         # Service composition & orchestration
+│   └── Realms/                            # Keycloak seed realm JSONs
+│
 ├── src/
-│   ├── ChatBot.Api/
-│   │   ├── Data/                       # EF Core entities + DbContext
+│   ├── ChatBot.Api/                       # Backend API
 │   │   ├── Endpoints/
-│   │   │   ├── ChatEndpoints.cs        # Chat CRUD
-│   │   │   └── TenantEndpoints.cs      # Tenant management + Keycloak
-│   │   ├── Middleware/                  # TenantContextMiddleware
-│   │   └── Services/
-│   │       ├── KeycloakAdminService.cs  # Keycloak Admin REST API client
-│   │       ├── TenantResolver.cs        # Cached tenant config lookup
-│   │       ├── AiServiceFactory.cs      # AI provider routing
-│   │       ├── ClaudeAiService.cs
-│   │       └── OpenAiService.cs
-│   ├── ChatBot.Gateway/
+│   │   │   ├── ChatEndpoints.cs           #   Chat session & message CRUD
+│   │   │   └── TenantEndpoints.cs         #   Tenant management + Keycloak provisioning
+│   │   ├── Services/
+│   │   │   ├── KeycloakAdminService.cs    #   Keycloak Admin REST API client
+│   │   │   ├── TenantResolver.cs          #   Cached tenant config lookup
+│   │   │   ├── AiServiceFactory.cs        #   Routes to Claude or OpenAI
+│   │   │   ├── ClaudeAiService.cs         #   Anthropic SDK integration
+│   │   │   └── OpenAiService.cs           #   OpenAI SDK integration
+│   │   ├── Data/                          #   EF Core entities + DbContext + seed data
+│   │   └── Middleware/                    #   Tenant context extraction
+│   │
+│   ├── ChatBot.Gateway/                   # YARP API Gateway
 │   │   ├── Auth/
-│   │   │   ├── MultiRealmJwtConfiguration.cs  # Dynamic JWT handler setup
-│   │   │   └── DynamicJwksKeyResolver.cs      # JWKS fetch + cache
+│   │   │   ├── DynamicJwtConfiguration.cs #   Single dynamic JWT handler
+│   │   │   └── DynamicJwksKeyResolver.cs  #   Runtime JWKS fetching + caching
 │   │   └── Middleware/
-│   │       └── HeaderInjectionMiddleware.cs    # JWT claims → headers
-│   ├── ChatBot.Frontend/
+│   │       └── HeaderInjectionMiddleware.cs#  JWT claims → X-Tenant-Id headers
+│   │
+│   ├── ChatBot.Frontend/                  # React SPA
 │   │   └── src/
-│   │       ├── components/
-│   │       │   ├── TenantSelector.tsx   # Dynamic tenant list from API
-│   │       │   ├── AdminPanel.tsx       # Create tenant form
-│   │       │   ├── ChatLayout.tsx
-│   │       │   ├── MessagePanel.tsx
-│   │       │   ├── MessageInput.tsx
-│   │       │   └── SessionList.tsx
-│   │       ├── stores/
-│   │       │   ├── tenantStore.ts       # Tenant list state (Zustand)
-│   │       │   ├── authStore.ts         # Keycloak auth state
-│   │       │   └── chatStore.ts         # Chat sessions/messages
-│   │       ├── services/
-│   │       │   ├── tenantService.ts     # Public + admin tenant API
-│   │       │   ├── chatService.ts
-│   │       │   └── api.ts              # Axios with auth interceptor
-│   │       └── config/
-│   │           └── keycloak.ts          # Keycloak helpers (no hardcoded tenants)
-│   └── ChatBot.ServiceDefaults/         # Shared Aspire configuration
-├── docker-compose.yml
+│   │       ├── components/                #   TenantSelector, AdminPanel, Chat UI
+│   │       ├── stores/                    #   tenantStore, authStore, chatStore
+│   │       ├── services/                  #   API clients (tenant, chat)
+│   │       └── config/keycloak.ts         #   Dynamic Keycloak helpers
+│   │
+│   └── ChatBot.ServiceDefaults/           # Shared Aspire config (OTel, health, resilience)
+│
+├── docker-compose.yml                     # Alternative to Aspire
 └── README.md
 ```
 
 ---
 
-## Technology Stack
-
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Orchestration | .NET Aspire | 13.1.2 |
-| Backend | .NET / ASP.NET Core | 10.0 |
-| ORM | Entity Framework Core (Npgsql) | 13.1.2 |
-| Gateway | YARP | 2.3.0 |
-| Auth | JWT Bearer | 10.0.1 |
-| Frontend | React + TypeScript | 19.2 + 5.9 |
-| Bundler | Vite | 7.3 |
-| CSS | Tailwind CSS | 4.2 |
-| State | Zustand | 5.0 |
-| Auth Client | keycloak-js | 26.2 |
-| IAM | Keycloak | 26.0 |
-| Database | PostgreSQL | 16 |
-| AI | Anthropic SDK / OpenAI SDK | 4.0 / 2.2 |
-
----
-
 ## Configuration
-
-### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OpenAI:ApiKey` | OpenAI API key | (user secrets) |
-| `Claude:ApiKey` | Anthropic API key | (user secrets) |
-| `Keycloak:AdminUser` | Keycloak master admin | `admin` |
-| `Keycloak:AdminPassword` | Keycloak master password | `admin` |
-| `AdminApiKey` | Admin endpoint auth key | `dev-admin-key-change-in-production` |
+| `Claude:ApiKey` | Anthropic API key | *(user secrets)* |
+| `OpenAI:ApiKey` | OpenAI API key | *(user secrets)* |
+| `Keycloak:AdminUser` | Master realm admin | `admin` |
+| `Keycloak:AdminPassword` | Master realm password | `admin` |
+| `AdminApiKey` | Tenant admin endpoint key | `dev-admin-key-change-in-production` |
 
-### YARP Routes
+### Gateway Routes (YARP)
 
-| Route | Path | Auth | Order |
-|-------|------|------|-------|
-| tenants-public | `/api/tenants` | None | 1 |
-| admin-route | `/api/admin/{**catch-all}` | X-Admin-Key | 2 |
-| api-route | `/api/{**catch-all}` | JWT (dynamic) | 10 |
+| Route | Pattern | Auth | Priority |
+|-------|---------|------|----------|
+| Public tenants | `/api/tenants` | None | 1 |
+| Admin | `/api/admin/**` | X-Admin-Key | 2 |
+| Chat API | `/api/**` | JWT (dynamic) | 10 |
 
 ---
 
-## License
+## Why This Stack?
+
+**YARP** — Not just a proxy. It's the security boundary. One place for JWT validation, header injection, and routing. Built on Kestrel — blazing fast.
+
+**Keycloak** — Enterprise IAM that scales. Each realm is a complete identity silo: users, roles, MFA, social login, LDAP federation. The Admin REST API makes it automatable.
+
+**Aspire** — Replaces docker-compose for local dev with automatic service discovery, health checks, OpenTelemetry, and a dashboard that actually helps you debug.
+
+**The combination** — YARP validates tokens from Keycloak, injects tenant context, and the API never needs to know about authentication. Add a tenant, add a realm, add users, add Google login — the Gateway and API just work.
+
+---
+
+<div align="center">
+
+**Built with .NET Aspire, Keycloak, React, and a belief that multi-tenancy shouldn't require a deploy.**
 
 MIT License
+
+</div>
