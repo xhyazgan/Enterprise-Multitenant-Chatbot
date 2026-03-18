@@ -10,7 +10,7 @@ export default function AdminPanel() {
   const [aiProvider, setAiProvider] = useState('Claude');
   const [aiModel, setAiModel] = useState('claude-haiku-4-5');
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [adminKey, setAdminKey] = useState('');
+  const [adminKey, setAdminKey] = useState('dev-admin-key-change-in-production');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -19,8 +19,8 @@ export default function AdminPanel() {
     setError(null);
     setSuccess(null);
 
-    if (!tenantId || !displayName || !adminKey) {
-      setError('Tenant ID, Display Name, and Admin Key are required');
+    if (!tenantId || !displayName) {
+      setError('Tenant ID and Display Name are required');
       return;
     }
 
@@ -149,18 +149,6 @@ export default function AdminPanel() {
             rows={2}
             placeholder="You are a helpful assistant for..."
             className="w-full px-3 py-2 bg-gray-900 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm resize-none"
-          />
-        </div>
-
-        {/* Admin Key */}
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Admin API Key</label>
-          <input
-            type="password"
-            value={adminKey}
-            onChange={e => setAdminKey(e.target.value)}
-            placeholder="Enter admin key"
-            className="w-full px-3 py-2 bg-gray-900 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none text-sm"
           />
         </div>
 
